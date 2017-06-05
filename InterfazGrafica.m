@@ -1,6 +1,7 @@
 pkg load control;
 pkg load signal;
 
+%Variables globales
 global pPrincipal;
 global sFunciones;
 global sOpciones;
@@ -15,6 +16,7 @@ global eNumPolos;
 global eDenCeros;
 global eGanancia;
   
+%Configuraciones de pantalla
 x = get(0, 'ScreenSize')
 ancho = 800
 alto = 600
@@ -27,7 +29,8 @@ pGeneral = uipanel (dialogo, "title", "ASIC 1C 2017 - K3011 - Grupo 2", "positio
 
 pPrincipal = uipanel(pGeneral, "title", "", "position", [0.024 0.025 0.95 0.85]);
 set(pPrincipal, "visible", "off");
-           
+
+%Funcion ejecutar
 function ejecutar (h, e, a1)
   global sOpciones;
   global sFunciones;
@@ -37,9 +40,10 @@ function ejecutar (h, e, a1)
   global tResultados;
   global tTitulo;
   
-  funcion = get(sFunciones, 'value');
-  opcion = get(sOpciones, 'value');
-  
+  funcion = get(sFunciones, 'value'); % 2 = ingreso por coeficientes | 3 = ingreso por polos y ceros
+  opcion = get(sOpciones, 'value'); % 1 = expresion de la func transf | 2 = Polos | 3 = Ceros | 4 = Ganancia | ...
+ 
+  %chequeo que no haya ingresado campos vacios
   if (strcmp (get(eNumPolos, "string"), ""))
     errordlg ("Por favor ingrese todos los datos.");
     return;
@@ -50,26 +54,33 @@ function ejecutar (h, e, a1)
     return;
   endif
   
+  %obtengo los datos segun la opcion que ingreso (coeficientes o polos/ceros)
   switch (opcion)
     % Coeficientes
     case 2
       valNum = str2num(get(eNumPolos, "string"));
       valDen = str2num(get(eDenCeros, "string"));
+      %tf recibe los numeradores y denominadores y arma la funcion transferencia
       gs = tf([valNum], [valDen]);
-      [ceros,polos,ganancia]=tf2zp([valNum],[valDen]);
-      ceros = num2str(ceros);
-      polos = num2str(polos);
-      ganancia = num2str(ganancia);
+      %tf2zp recibe la funcion transferencia (variable gs) y te la devuelve en expresiones de ceros, polos y ganancia
+      [ceros,polos,ganancia]=tf2zp([valNum],[valDen]);      
       % pzmap(gs);
       % errordlg(num2str(ceros));
+      
     % Polos y ceros
     case 3
       if (strcmp (get(eGanancia, "string"), ""))
         errordlg ("Por favor ingrese todos los datos.");
         return;
       endif
+      ceros = str2num(get(eDenCeros, "string"));
+      polos = str2num(get(eNumPolos, "string"));
+      ganancia = str2num(get(eGanancia, "string"));
+      gs = zpk(ceros, polos, ganancia)
+      
   endswitch
   
+%muestro los resultados segun la funcionalidad que se selecciono  
   switch (funcion)
     case 1
       t = evalc('gs');
@@ -78,17 +89,23 @@ function ejecutar (h, e, a1)
       break;
     case 2
       set(tTitulo, "string", "    Polos de la función");
-      set(tResultados, "string", polos);
+      set(tResultados, "string", num2str(polos));
+      break;
     case 3
       set(tTitulo, "string", "    Ceros de la función");
-      set(tResultados, "string", ceros);
+      set(tResultados, "string", num2str(ceros));
+      break;
     case 4
       set(tTitulo, "string", "    Ganancia de la función");
-      set(tResultados, "string", ganancia);
+      set(tResultados, "string", num2str(ganancia));
+      break;
     case 5
-      disp(funcion);
+       t = evalc('gs');
+      set(tTitulo, "string", "    Expresión de la función");
+      set(tResultados, "string", t);
     case 6
-      disp(funcion);
+      pzmap(gs);
+      grid on;
     case 7
       disp(funcion);
     case 8
@@ -122,6 +139,7 @@ function cambioSelect(h, e, a1)
   set(eNumPolos, "string", "");
   set(eDenCeros, "string", "");
   
+  %Si selecciono la opcion "INGRESAR POLOS Y CEROS" seteo los strings correspondientes
   if (get ( h, 'value' ) == 3)
     set(pPrincipal, "title", "Ingrese los polos y ceros (separados por espacio) y la ganancia de la función");
     set(tGanancia, "visible", "on");
@@ -131,6 +149,8 @@ function cambioSelect(h, e, a1)
     set(pPrincipal, "visible", "on");
     return;
   end
+  
+  %Si selecciono la opcion "INGRESAR COEFICIENTES" seteo los strings correspondientes
   if (get ( h, 'value' ) == 2)
     set(pPrincipal, "title", "Ingrese los coeficientes del polinomio (separados por espacios Ej: x^2 + 2x + 3 = [1 2 3])  de la función");
     set(tGanancia, "visible", "off");
@@ -143,16 +163,21 @@ function cambioSelect(h, e, a1)
   set(pPrincipal, "visible", "off");
 endfunction
 
+
+%Controles de la UI
+% 1) Dropdown de opciones, cuando se cambia la opcion llama a la funcion cambioSelect 
 sOpciones = uicontrol(pGeneral, "style", "popupmenu", ...
               "string","Por favor seleccione una opción ...|Ingresar coeficientes|Ingresar polos y ceros", ...
               "position", [20 alto - 60 ancho - 60 25], ...
               "callback", {@cambioSelect, "1"});
-
+              
+% 2) Dropdown de funcionalidades, cuando se cambia la opcion llama a cambioFuncion
 sFunciones = uicontrol(pPrincipal, "style", "popupmenu", ...
               "string","1. Expresión de la función transferencia.|2. Polos.|3. Ceros.|4. Ganancia.|5. Expresión con polos, ceros y ganancia.|6. Gráfico de polos y ceros.|7. Estabilidad del sistema.|8. Todas las características de la función.|9. Ingresar nueva función.|10. Finalizar.", ...
               "position", [460 alto - 175 ancho / 3 20], ...
               "callback", {@cambioFuncion, "1"});
-
+              
+% 3) Boton que ejecuta las operaciones, llama a ejecutar
 bCalcular = uicontrol(pPrincipal, "style", "pushbutton", ...
                "string", "Ejecutar", ...
                "position", [20 alto - 210 ancho - 90 25], ...
