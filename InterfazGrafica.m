@@ -15,7 +15,7 @@ global tTitulo;
 global eNumPolos;
 global eDenCeros;
 global eGanancia;
-  
+
 %Configuraciones de pantalla
 x = get(0, 'ScreenSize')
 ancho = 800
@@ -32,6 +32,7 @@ set(pPrincipal, "visible", "off");
 
 %Funcion ejecutar
 function ejecutar (h, e, a1)
+  global pPrincipal;
   global sOpciones;
   global sFunciones;
   global eNumPolos;
@@ -44,12 +45,12 @@ function ejecutar (h, e, a1)
   opcion = get(sOpciones, 'value'); % 1 = expresion de la func transf | 2 = Polos | 3 = Ceros | 4 = Ganancia | ...
  
   %chequeo que no haya ingresado campos vacios
-  if (strcmp (get(eNumPolos, "string"), ""))
+  if (strcmp (get(eNumPolos, "string"), "") && funcion != 9 && funcion != 10)
     errordlg ("Por favor ingrese todos los datos.");
     return;
   endif
 
-  if (strcmp (get(eDenCeros, "string"), ""))
+  if (strcmp (get(eDenCeros, "string"), "") && funcion != 9 && funcion != 10)
     errordlg ("Por favor ingrese todos los datos.");
     return;
   endif
@@ -69,7 +70,7 @@ function ejecutar (h, e, a1)
       
     % Polos y ceros
     case 3
-      if (strcmp (get(eGanancia, "string"), ""))
+      if (strcmp (get(eGanancia, "string"), "") && funcion != 9 && funcion != 10)
         errordlg ("Por favor ingrese todos los datos.");
         return;
       endif
@@ -80,10 +81,18 @@ function ejecutar (h, e, a1)
       
   endswitch
   
+  % Deshabilito todo para después habilitarlo con el "Ingresar nueva función"
+  set(sOpciones, "enable", "off");
+  set(eGanancia, "enable", "off");
+  set(eNumPolos, "enable", "off");
+  set(eDenCeros, "enable", "off");
+  set(tResultados, "horizontalalignment","center");
+  
 %muestro los resultados segun la funcionalidad que se selecciono  
   switch (funcion)
     case 1
       t = evalc('gs');
+      t = substr(t, 56, strfind(t, "Contin") - 57);
       set(tTitulo, "string", "    Expresión de la función");
       set(tResultados, "string", t);
       break;
@@ -101,19 +110,89 @@ function ejecutar (h, e, a1)
       break;
     case 5
        t = evalc('gs');
+       t = substr(t, 56, strfind(t, "Contin") - 57);
       set(tTitulo, "string", "    Expresión de la función");
       set(tResultados, "string", t);
     case 6
-      pzmap(gs);
-      grid on;
+        set(tTitulo, "string", "    Gráfico de polos y ceros");
+        fPolosCeros = figure(1, "visible", "off");
+        x = get(0, 'ScreenSize')
+        x = [x(3)/2-(300/2) x(4)/2.9-(300/2) 300 300]
+        set(fPolosCeros, "position", x);
+        set(fPolosCeros, "menubar", "none");
+        set(fPolosCeros, "windowstyle", "modal");
+        set(fPolosCeros, "name", "Gráfico de polos y ceros");
+        set(fPolosCeros, "resize", "off");
+        set(fPolosCeros, "visible", "on");
+        zplane(ceros, polos);
     case 7
-      disp(funcion);
+      % Estabilidad de sistema
+      set(tTitulo, "string", "    Estabilidad del sistema");
+      set(tResultados, "horizontalalignment","left");
+      
+      stringPolos = "";
+      polosPositivos = 0;
+      polosNulos = 0;
+      % Me fijo los polos
+      for i = 1:length(polos)
+        stringPolos = [stringPolos "Parte real polo " num2str(i) ": " num2str(real(polos(i))) "\n"];
+        if (real(polos(i)) > 0)
+          polosPositivos++;
+        endif
+        if (real(polos(i)) == 0)
+          polosNulos++;
+        endif
+      endfor
+      
+      if (polosPositivos != 0)
+        stringPolos = [stringPolos "\n\n Hay " num2str(polosPositivos) " polos con parte real positiva\n" ...
+                        "\t\t\t\tSISTEMA INESTABLE"];
+      elseif (polosNulos == 0)
+        stringPolos = [stringPolos "\t\t\t\tSISTEMA ESTABLE"];
+      elseif (polosNulos == 1)
+        stringPolos = [stringPolos "\t\t\tSISTEMA MARGINALMENTE ESTABLE"];
+      elseif (polosNulos > 1)
+        stringPolos = [stringPolos "\t\t\tSISTEMA INESTABLE (" num2str(polosNulos) " polos en el cero)"];
+      endif
+       
+      set(tResultados, "string", stringPolos);
+      
     case 8
+      % Todas las características
+      set(tTitulo, "string", "    Todas las características de la función");
+      
+      t = evalc('gs');
+      t = substr(t, 56, strfind(t, "Contin") - 57);
+      set(tResultados, "horizontalalignment","left");
+      set(tResultados, "string", ["\nExpresión:\n\n" t ...
+          "\n- Polos:\t\t" num2str(polos) ...          
+          "\n- Ceros:\t\t" num2str(ceros) ...
+          "\n- Ganancia:\t" num2str(ganancia) ...
+          "\n- Estabilidad:\t" num2str(polos) ...
+          ]);
+      
+      fPolosCeros = figure(1, "visible", "off");
+      x = get(0, 'ScreenSize')
+      x = [x(3)/1.50-(200/2) x(4)/3-(200/2) 200 200]
+      set(fPolosCeros, "position", x);
+      set(fPolosCeros, "menubar", "none");
+      set(fPolosCeros, "windowstyle", "modal");
+      set(fPolosCeros, "name", "Gráfico");
+      set(fPolosCeros, "resize", "off");
+      set(fPolosCeros, "visible", "on");
+      zplane(ceros, polos);
+      
       disp(funcion);
     case 9
-      disp(funcion);
+      set(sOpciones, "enable", "on");
+      set(eGanancia, "enable", "on");
+      set(eNumPolos, "enable", "on");
+      set(eDenCeros, "enable", "on");
+      set(sOpciones, "value", 1);
+      set(sFunciones, "value", 1);
+      set(pPrincipal, "visible", "off");
     case 10
-      exit();
+      close();
   endswitch
 endfunction
 
@@ -138,6 +217,7 @@ function cambioSelect(h, e, a1)
   set(eGanancia, "string", "");
   set(eNumPolos, "string", "");
   set(eDenCeros, "string", "");
+  set(sFunciones, "value", 1);
   
   %Si selecciono la opcion "INGRESAR POLOS Y CEROS" seteo los strings correspondientes
   if (get ( h, 'value' ) == 3)
