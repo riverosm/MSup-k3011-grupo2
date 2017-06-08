@@ -81,6 +81,9 @@ function ejecutar (h, e, a1)
       
   endswitch
   
+  polosReales = setdiff(polos, ceros);
+  cerosReales = setdiff(ceros, polos);
+  
   % Deshabilito todo para después habilitarlo con el "Ingresar nueva función"
   set(sOpciones, "enable", "off");
   set(eGanancia, "enable", "off");
@@ -98,11 +101,11 @@ function ejecutar (h, e, a1)
       break;
     case 2
       set(tTitulo, "string", "    Polos de la función");
-      set(tResultados, "string", num2str(polos));
+      set(tResultados, "string", num2str(polosReales));
       break;
     case 3
       set(tTitulo, "string", "    Ceros de la función");
-      set(tResultados, "string", num2str(ceros));
+      set(tResultados, "string", num2str(cerosReales));
       break;
     case 4
       set(tTitulo, "string", "    Ganancia de la función");
@@ -124,7 +127,7 @@ function ejecutar (h, e, a1)
         set(fPolosCeros, "name", "Gráfico de polos y ceros");
         set(fPolosCeros, "resize", "off");
         set(fPolosCeros, "visible", "on");
-        zplane(ceros, polos);
+        zplane(cerosReales, polosReales);
     case 7
       % Estabilidad de sistema
       set(tTitulo, "string", "    Estabilidad del sistema");
@@ -134,12 +137,12 @@ function ejecutar (h, e, a1)
       polosPositivos = 0;
       polosNulos = 0;
       % Me fijo los polos
-      for i = 1:length(polos)
-        stringPolos = [stringPolos "Parte real polo " num2str(i) ": " num2str(real(polos(i))) "\n"];
-        if (real(polos(i)) > 0)
+      for i = 1:length(polosReales)
+        stringPolos = [stringPolos "Parte real polo " num2str(i) ": " num2str(real(polosReales(i))) "\n"];
+        if (real(polosReales(i)) > 0)
           polosPositivos++;
         endif
-        if (real(polos(i)) == 0)
+        if (real(polosReales(i)) == 0)
           polosNulos++;
         endif
       endfor
@@ -161,14 +164,37 @@ function ejecutar (h, e, a1)
       % Todas las características
       set(tTitulo, "string", "    Todas las características de la función");
       
+            stringPolos = "";
+      polosPositivos = 0;
+      polosNulos = 0;
+      % Me fijo los polos
+      for i = 1:length(polosReales)
+        if (real(polosReales(i)) > 0)
+          polosPositivos++;
+        endif
+        if (real(polosReales(i)) == 0)
+          polosNulos++;
+        endif
+      endfor
+      
+      if (polosPositivos != 0)
+        stringPolos = [stringPolos "\t\t\t\tSISTEMA INESTABLE"];
+      elseif (polosNulos == 0)
+        stringPolos = [stringPolos "\t\t\t\tSISTEMA ESTABLE"];
+      elseif (polosNulos == 1)
+        stringPolos = [stringPolos "\t\t\tSISTEMA MARGINALMENTE ESTABLE"];
+      elseif (polosNulos > 1)
+        stringPolos = [stringPolos "\t\t\tSISTEMA INESTABLE (" num2str(polosNulos) " polos en el cero)"];
+      endif
+      
       t = evalc('gs');
       t = substr(t, 56, strfind(t, "Contin") - 57);
       set(tResultados, "horizontalalignment","left");
       set(tResultados, "string", ["\nExpresión:\n\n" t ...
-          "\n- Polos:\t\t" num2str(polos) ...          
-          "\n- Ceros:\t\t" num2str(ceros) ...
+          "\n- Polos:\t\t" num2str(polosReales) ...          
+          "\n- Ceros:\t\t" num2str(cerosReales) ...
           "\n- Ganancia:\t" num2str(ganancia) ...
-          "\n- Estabilidad:\t" num2str(polos) ...
+          "\n- Estabilidad:\t" stringPolos ...
           ]);
       
       fPolosCeros = figure(1, "visible", "off");
@@ -180,7 +206,7 @@ function ejecutar (h, e, a1)
       set(fPolosCeros, "name", "Gráfico");
       set(fPolosCeros, "resize", "off");
       set(fPolosCeros, "visible", "on");
-      zplane(ceros, polos);
+      zplane(cerosReales, polosReales);
       
       disp(funcion);
     case 9
